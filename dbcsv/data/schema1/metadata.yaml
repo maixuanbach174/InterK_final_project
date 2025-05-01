@@ -1,0 +1,23 @@
+tables:
+  - table_name: table1
+    columns:
+      - column_name: id
+        column_type: INT
+      - column_name: name
+        column_type: VARCHAR
+      - column_name: age
+        column_type: INT
+      - column_name: email
+        column_type: VARCHAR
+  - table_name: table2
+    columns:
+      - column_name: id
+        column_type: INT
+      - column_name: name
+        column_type: VARCHAR
+      - column_name: age
+        column_type: INT
+      - column_name: department
+        column_type: VARCHAR
+      - column_name: salary
+        column_type: INT

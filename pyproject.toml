@@ -1,0 +1,26 @@
+[project]
+name = "dbcsv"
+version = "0.1.1"
+description = "A SQL database engine that operates on CSV files"
+readme = "README.md"
+authors = [{ name = "RND" }]
+license = { text = "MIT" }
+requires-python = ">=3.8"
+dependencies = [
+    "fastapi==0.115.12",
+    "pydantic==2.11.1",
+    "uvicorn==0.34.0",
+    "uvicorn[standard]",
+    "pydantic-settings==2.0.0",
+    "python-dotenv",
+    "PyJWT==2.10.1",
+    "python-multipart",
+    "PyYAML",
+    "passlib[bcrypt]>=1.7.4",
+    "pytest",
+    "requests",
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["dbcsv*"]

@@ -1,0 +1,47 @@
+grammar = r"""
+    start: select_statement 
+
+    select_statement: "SELECT" column_list "FROM" table_name [where_clause]
+
+    column_list: ASTERISK | column_name ("," column_name)*
+
+    column_name: CNAME
+    table_name: CNAME | (LPAREN subquery RPAREN [alias])
+
+
+    
+    where_clause: "WHERE" condition
+    condition: expression
+
+    subquery: select_statement
+
+    expression: comparison_expression
+          | expression "AND" expression -> and_expr
+          | expression "OR" expression -> or_expr
+
+    comparison_expression: column_name COMPARISON_OP value
+                        | column_name IS NULL -> is_null
+                        | column_name IS NOT NULL -> is_not_null
+                        | column_name IN LPAREN subquery RPAREN -> in_subquery
+                        | column_name NOT IN LPAREN subquery RPAREN -> not_in_subquery
+                        | column_name
+
+    COMPARISON_OP: ">" | "<" | "=" | ">=" | "<=" | "!=" | "<>" | "LIKE"
+    LPAREN: "("
+    RPAREN: ")"
+    IS: "IS"
+    IN: "IN"
+    NOT: "NOT"
+    NULL: "NULL"
+    ASTERISK: "*"
+    SINGLE_QUOTED_STRING: /'(?:[^'\\]|\\.)*'/
+
+    alias: "AS" CNAME
+    value: SIGNED_NUMBER | ESCAPED_STRING | SINGLE_QUOTED_STRING | "NULL" | LPAREN subquery RPAREN
+    
+    %import common.CNAME
+    %import common.ESCAPED_STRING
+    %import common.SIGNED_NUMBER
+    %import common.WS
+    %ignore WS
+"""

@@ -1,0 +1,14 @@
+{
+    "johndoe": {
+        "username": "johndoe",
+        "email": "johndoe@example.com",
+        "full_name": "John Doe",
+        "hashed_password": "secret"
+    },
+    "gogo": {
+        "username": "gogo",
+        "email": "gogo@example.com",
+        "full_name": "Go Go",
+        "hashed_password": "secret"
+    }
+}

@@ -1,0 +1,38 @@
+**/__pycache__/
+**/*.py[cod]
+**/*$py.class
+
+# Virual Environment
+.env/
+.venv/
+venv/
+
+# IDE
+.vscode/
+.idea/
+
+# Exclude test
+.tests/
+*.log
+
+# Exclude Dockerfile
+Dockerfile
+
+# Exclude any sensitive config or secret files
+.env 
+*.env
+*.secrets
+*.key
+*.pem
+
+.DS_Store
+
+
+.git/
+.gitignore
+.dockerignore
+README.md
+LICENSE
+*.yml
+docker-compose.*
+pyproject.toml
