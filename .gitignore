@@ -12,6 +12,3 @@ node_modules/
 .pytest_cache/
 .DS_Store
 __pycache__/
-
-
-dbcsv/data/schema3

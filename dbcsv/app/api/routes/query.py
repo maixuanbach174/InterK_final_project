@@ -5,7 +5,7 @@ from fastapi import APIRouter , Depends
 from dbcsv.app.api.schemas.auth import User
 from dbcsv.app.api.schemas.sql_request import SQLRequest
 from dbcsv.app.core.database_engine import DatabaseEngine, get_engine
-from dbcsv.app.dependencies import current_user_dependency
+from dbcsv.app.security.auth import current_user_dependency
 
 router = APIRouter(
     prefix='/query',

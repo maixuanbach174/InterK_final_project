@@ -6,7 +6,7 @@ tables:
       - column_name: name
         column_type: VARCHAR
       - column_name: age
-        column_type: INT
+        column_type: FLOAT
       - column_name: email
         column_type: VARCHAR
   - table_name: table2

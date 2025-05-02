@@ -62,14 +62,30 @@ class DBTypeObject:
         if len(row) != len(column_types):
             raise ValueError(f"Row length {len(row)} does not match column types length {len(column_types)}")
         return [DBTypeObject.convert_datatype(data, dtype) for data, dtype in zip(row, column_types)]
+    def __repr__(self):
+        if "VARCHAR" in self.values:
+            return "STRING_TYPE"
+        else: 
+            return "NUMERIC_TYPE"
             
 
-STRING = DBTypeObject("varchar", "text", "char")
-INTEGER = DBTypeObject("integer", "int", "bigint", "smallint", "tinyint")
-FLOAT = DBTypeObject("float", "double", "decimal", "dec")
-BOOLEAN = DBTypeObject("boolean", "bool")
-DATE = DBTypeObject("date")
-DATETIME = DBTypeObject("datetime", "timestamp")
-NULL = DBTypeObject("null")
+# STRING = DBTypeObject("varchar", "text", "char")
+# INTEGER = DBTypeObject("integer", "int", "bigint", "smallint", "tinyint")
+# FLOAT = DBTypeObject("float", "double", "decimal", "dec")
+# BOOLEAN = DBTypeObject("boolean", "bool")
+# DATE = DBTypeObject("date")
+# DATETIME = DBTypeObject("datetime", "timestamp")
+# NULL = DBTypeObject("null")
+# STRING_TYPE = DBTypeObject("varchar", "text", "char", "datetime", "timestamp", "date")
+# NUMERIC_TYPE = DBTypeObject("integer", "int", "bigint", "smallint", "tinyint", "float", "double", "decimal", "dec")
 
-
+# Convert them to uppercase
+STRING = DBTypeObject("VARCHAR", "TEXT", "CHAR")
+INTEGER = DBTypeObject("INTEGER", "INT", "BIGINT", "SMALLINT", "TINYINT")
+FLOAT = DBTypeObject("FLOAT", "DOUBLE", "DECIMAL", "DEC")
+BOOLEAN = DBTypeObject("BOOLEAN", "BOOL")
+DATE = DBTypeObject("DATE")
+DATETIME = DBTypeObject("DATETIME", "TIMESTAMP")
+NULL = DBTypeObject("NULL")
+STRING_TYPE = DBTypeObject("VARCHAR", "TEXT", "CHAR", "DATETIME", "TIMESTAMP", "DATE")
+NUMERIC_TYPE = DBTypeObject("INTEGER", "INT", "BIGINT", "SMALLINT", "TINYINT", "FLOAT", "DOUBLE", "DECIMAL", "DEC")
