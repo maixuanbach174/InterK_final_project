@@ -3,8 +3,7 @@ from typing import Annotated
 from fastapi import APIRouter, Form
 
 from dbcsv.app.api.schemas.auth import Token, User
-from dbcsv.app.dependencies import current_user_dependency
-from dbcsv.app.security.auth import auth_manager
+from dbcsv.app.security.auth import current_user_dependency, auth_manager
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 

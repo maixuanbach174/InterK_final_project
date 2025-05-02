@@ -105,3 +105,5 @@ auth_manager = AuthManager(
     os.getenv("ALGORITHM"),
     int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES")),
 )
+
+current_user_dependency = Depends(auth_manager.get_current_user)

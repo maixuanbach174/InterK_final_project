@@ -2,7 +2,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
-from dbcsv.app.api.routes import auth, query, websocket
+from dbcsv.app.api.routes import auth, query
 from dbcsv.app.security.auth import auth_manager
 
 
@@ -22,4 +22,3 @@ def root():
 
 app.include_router(router=query.router)
 app.include_router(router=auth.router)
-app.include_router(router=websocket.router)
