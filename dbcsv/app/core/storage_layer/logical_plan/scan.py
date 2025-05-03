@@ -2,6 +2,7 @@ from typing import List
 
 from dbcsv.app.core.storage_layer.logical_plan.logical_plan import LogicalPlan
 from dbcsv.app.core.storage_layer.iterator.table_iterator import TableIterator
+from dbcsv.app.core.storage_layer.metadata import Metadata
 
 
 class Scan(LogicalPlan):
@@ -22,6 +23,3 @@ class Scan(LogicalPlan):
     @property
     def column_types(self) -> List[str]:
         return self._column_types
-    
-    def __repr__(self):
-        return f"{self.__class__.__name__}(schema={self._columns}: {self._column_types}, table_name={self.table_name}, batch_size={self.batch_size})"

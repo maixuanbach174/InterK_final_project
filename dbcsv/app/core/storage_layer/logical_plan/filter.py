@@ -11,7 +11,7 @@ class Filter(LogicalPlan):
         self.predicate = predicate
         
     def execute(self) -> 'FilterIterator':
-        return FilterIterator(self.child.execute(), self.predicate, self.child.columns, self.child.column_types)
+        return FilterIterator(self.child.execute(), self.predicate)
     
     @property
     def columns(self) -> List[str]:

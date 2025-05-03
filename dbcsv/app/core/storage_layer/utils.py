@@ -5,15 +5,17 @@ from dbcsv.app.core.storage_layer.logical_plan.scan import Scan
 from dbcsv.app.core.storage_layer.logical_plan.filter import Filter
 from dbcsv.app.core.storage_layer.logical_plan.project import Project
 from dbcsv.app.core.storage_layer.metadata import Metadata
+import operator
+
 OPERATORS = {
-    "=": lambda x, y: x == y,
-    "==": lambda x, y: x == y,
-    "!=": lambda x, y: x != y,
-    "<>": lambda x, y: x != y,
-    "<": lambda x, y: x < y,
-    "<=": lambda x, y: x <= y,
-    ">": lambda x, y: x > y,
-    ">=": lambda x, y: x >= y,
+    "=": operator.eq,
+    "==": operator.eq,
+    "!=": operator.ne,
+    "<>": operator.ne,
+    "<": operator.lt,
+    "<=": operator.le,
+    ">": operator.gt,
+    ">=": operator.ge,
 }
 
 def sql_to_logical_plan(parsed_query: dict, metadata: Metadata) -> LogicalPlan:

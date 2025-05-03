@@ -6,18 +6,18 @@ import os
 import json
 from typing import List, Any
 
-from dbcsv.app.core.storage_layer.datatypes import DBTypeObject
+from dbcsv.app.core.storage_layer.datatypes import prepare_converters
 
 DB_DIR = str(Path(__file__).parent.parent.parent.parent.parent / "data")
 
 class TableIterator:
-    # path: schema/table_name
     def __init__(self, schema: str, table: str, metadata: dict[str, str] = None, batch_size: int = 1000):
         self.schema = schema.lower()
         self.table_name = table.lower()
         self.batch_size = batch_size
         self._columns = list(metadata.keys()) if metadata else []
         self._column_types = list(metadata.values()) if metadata else []
+        self.converters = prepare_converters(self._column_types)
         self._file = self._load_file(schema=self.schema, table=self.table_name)
         self._reader = csv.reader(self._file)
         self._check_header()
@@ -33,8 +33,7 @@ class TableIterator:
         for _ in range(self.batch_size):
             try:
                 row = next(self._reader)
-                row = DBTypeObject.convert_type(row, self._column_types)
-                
+                row = [fn(cell) for fn, cell in zip(self.converters, row)]
                 if len(row) != len(self._columns):
                     raise ValueError(f"Row length does not match column length in {self.schema}/{self.table_name}.")
                 self._cache.append(row)

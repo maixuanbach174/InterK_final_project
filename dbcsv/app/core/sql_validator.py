@@ -1,11 +1,15 @@
-from typing import Optional
 from sqlglot import parse_one, exp
 from sqlglot.errors import ParseError
-
-from dbcsv.app.core.storage_layer.datatypes import NUMERIC_TYPE, STRING_TYPE, DBTypeObject
 from dbcsv.app.core.storage_layer.metadata import Metadata
 
 class SQLValidator:
+    NUMERIC_TYPES = {
+        "INTEGER", "INT", "BIGINT", "SMALLINT", "TINYINT",
+        "FLOAT", "DOUBLE", "DECIMAL", "DEC"
+    }
+    STRING_TYPES = {
+        "VARCHAR", "TEXT", "CHAR", "STRING"
+    }
     def __init__(self, metadatas: dict[str, Metadata], dialect: str = "mysql"):
         self.__metadatas = metadatas
         self.__dialect = dialect
@@ -56,7 +60,7 @@ class SQLValidator:
         for projection in tree.expressions:
             if isinstance(projection, exp.Alias):
                 raise SyntaxError(f"Alias is not supported '{projection}")
-            if isinstance(projection, exp.Column):  
+            elif isinstance(projection, exp.Column):  
                 if projection.catalog:
                     raise SyntaxError(f"Catalog is not supported '{projection}")
                 if projection.alias:
@@ -69,6 +73,10 @@ class SQLValidator:
                     raise ValueError(f"Invalid table qualifier for '{projection.name}': '{projection.table}'")
                 if projection.name not in metadata.data[table] and projection.name != "*":
                     raise ValueError(f"Column '{projection.name}' not found in table '{table}'")
+            elif isinstance(projection, exp.Star):
+                continue
+            else:
+                raise SyntaxError(f"Unsupported projection: {projection.sql()}")
         
 
     def _validate_predicate(self, expr: exp.Expression, table: str, metadata: Metadata):
@@ -83,14 +91,18 @@ class SQLValidator:
         if isinstance(expr, (exp.EQ, exp.NEQ, exp.GT, exp.LT, exp.GTE, exp.LTE)):
             left_type = self._get_operand_type(expr.left, table, metadata)
             right_type = self._get_operand_type(expr.right, table, metadata)
-            
-            if left_type and right_type and left_type != right_type:
-                raise ValueError(f"Type mismatch: {left_type} and {right_type}")
-            return
+
+            if left_type in self.NUMERIC_TYPES and right_type in self.NUMERIC_TYPES:
+                return
+            if left_type in self.STRING_TYPES and right_type in self.STRING_TYPES:
+                return
+            if left_type == right_type:
+                return
+            raise TypeError(f"Type mismatch: {left_type} vs {right_type} in {expr.sql()}")
 
         raise SyntaxError(f"Unsupported predicate: {expr.sql()}")
 
-    def _get_operand_type(self, operand: exp.Expression, table: str, metadata: Metadata) -> str | DBTypeObject:
+    def _get_operand_type(self, operand: exp.Expression, table: str, metadata: Metadata) -> str:
       
         if isinstance(operand, exp.Column):
             if operand.catalog:
@@ -102,36 +114,15 @@ class SQLValidator:
             
             if operand.name not in metadata.data[table]:
                 raise ValueError(f"Column not found: {operand.sql()}")
-            if metadata.data[table][operand.name] == STRING_TYPE:
-                return STRING_TYPE
-            elif metadata.data[table][operand.name] == NUMERIC_TYPE:
-                return NUMERIC_TYPE
+            return metadata.data[table][operand.name]
         
         elif isinstance(operand, exp.Literal):
             # Infer basic types from literals
             if operand.is_string:
-                return STRING_TYPE
+                return "VARCHAR"
+            elif operand.is_int:
+                return "INTEGER"
             elif operand.is_number:
-                return NUMERIC_TYPE
+                return "FLOAT"
     
         raise ValueError(f"Unsupported literal type: {operand.sql()}")     
-
-
-# Example usage
-if __name__ == "__main__":
-    metadatas = {
-        "schema1": Metadata("schema1"),
-        "schema2": Metadata("schema2"),
-    }
-    validator = SQLValidator(metadatas)
-    sql = "SELECT * FROM schema1.table1 WHERE table1.id = 12.3 OR '30' > '20'"
-    try:
-        tree = validator.parse(sql)
-        validator.validate(tree, "schema1")
-        print(repr(tree))
-    except (SyntaxError, ValueError) as e:
-        print(f"SQL validation error: {e}")
-    # # num = 10
-    # # num2 = 10.00000000000
-    # # print(num == num2)
-    # print type of columns in metadata
