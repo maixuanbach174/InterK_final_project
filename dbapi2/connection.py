@@ -1,165 +1,145 @@
-from typing import Optional, List, Any
+import json
+import time
+import requests
+from typing import Any, Iterator, List, Optional, Tuple
 
-from dbapi2.utils import validate_dsn_url, login, query, validate_token
-from dbapi2.exception import InternalError, NotSupportedError
+# PEP‑249 globals
+apilevel = "2.0"
+threadsafety = 1
+paramstyle = "named"
 
-
-class Connection:
-    def __init__(self, token: str):
-        self.token = token
-        self.__url = None
-        self.__is_online = True
-        self.__db = None
-
-    @property
-    def url(self):
-        return self.__url
-
-    @url.setter
-    def url(self, url):
-        self.__url = url
-
-    @property
-    def is_online(self):
-        return self.__is_online
-
-    @property
-    def db(self):
-        return self.__db
-
-    @db.setter
-    def db(self, db):
-        self.__db = db
-
-    def cursor(self) -> "Cursor":
-        if not self.__is_online:
-            raise InternalError("Cannot create any cursor from a closed connection")
-        return Cursor(self)
-
-    def close(self):
-        if not self.__is_online:
-            raise InternalError("Connection is already closed")
-        self.__is_online = False
-
-
-class Cursor:
-    def __init__(self, connection: Connection):
-        self.arraysize = 1
-        self._connection = connection
-        self._description = None
-        self._rowcount = -1
-        self._is_open = True
-
-        # Buffer
-        self._results = []
-
-    @property
-    def description(self):
-        return self._description
-
-    @property
-    def is_open(self):
-        return self._is_open
-
-    def close(self):
-        if not self._connection.is_online:
-            raise InternalError(
-                "Cannot perform close() on cursor of a closed connection"
-            )
-        if not self._is_open:
-            raise InternalError("Cursor must be opened to close()")
-        # Free resources
-        self._is_open = False
-        self._results = None
-
-    def execute(self, q: str, parameters=None) -> None:
-        if not self._connection.is_online:
-            raise InternalError(
-                "Cannot perform execute() on cursor of a closed connection"
-            )
-        if not self._is_open:
-            raise InternalError("Cursor must be opened to execute any query")
-
-        # Validate JWT token exp date before querying
-        new_token = validate_token(self._connection.url, self._connection.token)
-
-        if new_token is not None:
-            self._connection.token = new_token
-
-        # Run query
-        result = query(
-            self._connection.url, self._connection.token, self._connection.schema, q
-        )
-
-        # Assign result to buffer
-        self._results = result
-
-    def fetchone(self):
-        if not self._connection.is_online:
-            raise InternalError(
-                "Cannot perform fetchone() on cursor of a closed connection"
-            )
-        if not self._is_open:
-            raise InternalError("Cursor must be opened to fetch any result")
-        if self._results:
-            return self._results[0]
-        return None
-
-    def fetchmany(self, size=None):
-        if not self._connection.is_online:
-            raise InternalError(
-                "Cannot perform fetchmany() on cursor of a closed connection"
-            )
-        if not self._is_open:
-            raise InternalError("Cursor must be opened to fetch any result")
-        size = size or self.arraysize
-        return self._results[:size]
-
-    def fetchall(self):
-        if not self._connection.is_online:
-            raise InternalError(
-                "Cannot perform fetchall() on cursor of a closed connection"
-            )
-        if not self._is_open:
-            raise InternalError("Cursor must be opened to fetch any result")
-        return self._results
-
-    # Does nothing, same as sqlite3 documentation
-    def setinputsizes(self, sizes: List[Any]):
-        raise NotSupportedError(
-            "setinputsizes() is not supported. It is implemented to comply with DBAPI2 standard"
-        )
-
-    # Does nothing, same as sqlite3 documentation
-    def setoutputsize(self, sizes: List[Any], column=None):
-        raise NotSupportedError(
-            "setinputsizes() is not supported. It is implemented to comply with DBAPI2 standard"
-        )
+# Exceptions
+class Error(Exception): ...
+class DatabaseError(Error): ...
+class ProgrammingError(Error): ...
 
 
 def connect(
-    dsn: str,
-    user: Optional[str],
-    password: Optional[str],
-) -> Connection:
+    base_url: str,
+    username: str,
+    password: str,
+    db:   str,
+    timeout:  float = 5.0,
+) -> "Connection":
     """
-    Initializes a connection to the database.
-
-    Returns a Connection Object. It takes a number of parameters which are database dependent.
-
-    E.g. a connect could look like this: connect(dsn='https://localhost:1234/schema', user='guido', password='1234')
+    DB‑API connect: authenticate against /auth/connect to get token + schema.
     """
+    base = base_url.rstrip("/")
+    resp = requests.post(
+        f"{base}/auth/connect",
+        data={"username": username, "password": password, "db": db},
+        timeout=timeout,
+    )
+    if resp.status_code != 200:
+        raise DatabaseError(f"Connect failed: {resp.status_code} {resp.text}")
+    tok = resp.json()
+    return Connection(base, tok["access_token"], db, timeout)
 
-    # Validate url correctness
-    schema, url = validate_dsn_url(dsn)
 
-    # Request to /login endpoint of dsn to get JWT token. Catches exception if user doesn't exist in database
-    token = login(url, user, password)
+class Connection:
+    def __init__(self, base: str, access_token: str, db: str,timeout: float):
+        self._base = base
+        self._access_token = access_token
+        self._timeout = timeout
+        self._db = db
 
-    # Create connection
-    conn = Connection(token=token)
+    def cursor(self) -> "Cursor":
+        return Cursor(self)
+    
+    def close(self):
+        # No persistent connection to close
+        pass
 
-    conn.schema = schema
-    conn.url = url
 
-    return conn
+class Cursor:
+    # … __init__ unchanged …
+    def __init__(self, conn: Connection):
+        self._conn = conn
+        self._row_gen: Optional[Iterator[Tuple[Any,...]]] = None
+        self.description = None
+        self.rowcount: int = -1
+
+    def execute(self, operation: str, parameters: Any = None):
+        """
+        Send SQL to /query/sql/, using the schema from self._conn.
+        Raises:
+          ProgrammingError for any 4xx (validation) failure,
+          DatabaseError    for any 5xx or network failure.
+        """
+        url = f"{self._conn._base}/query/sql/"
+        payload = {"sql": operation, "db": self._conn._db}
+        headers = {"Authorization": f"Bearer {self._conn._access_token}"}
+
+        try:
+            resp = requests.post(
+                url,
+                json=payload,
+                headers=headers,
+                timeout=self._conn._timeout,
+                stream=True,
+            )
+        except requests.RequestException as e:
+            # network or timeout
+            raise DatabaseError(f"Network error during query: {e}") from e
+
+        # handle HTTP errors
+        if 400 <= resp.status_code < 500:
+            # client/validation error
+            detail = resp.json().get("detail", resp.text)
+            raise ProgrammingError(f"Query failed ({resp.status_code}): {detail}")
+        if resp.status_code >= 500:
+            detail = resp.json().get("detail", resp.text) if resp.headers.get("content-type","").startswith("application/json") else resp.text
+            raise DatabaseError(f"Server error ({resp.status_code}): {detail}")
+
+        # success → set up row generator
+        self._row_gen = self._make_row_generator(resp)
+        self.rowcount = -1
+        return self
+
+    def _make_row_generator(self, resp: requests.Response) -> Iterator[Tuple[Any,...]]:
+        """
+        NDJSON or JSON‑batch stream.  Any JSON errors become ProgrammingError.
+        """
+        for line in resp.iter_lines(decode_unicode=True):
+            if not line:
+                continue
+            try:
+                data = json.loads(line)
+            except json.JSONDecodeError as e:
+                raise ProgrammingError(f"Invalid JSON in response: {e}") from e
+
+            if not isinstance(data, list):
+                raise ProgrammingError(f"Unexpected payload: {data!r}")
+
+            # batch or single-row?
+            if data and isinstance(data[0], list):
+                for row in data:
+                    yield tuple(row)
+            else:
+                yield tuple(data)
+                
+    def fetchone(self) -> Optional[Tuple[Any, ...]]:
+        try:
+            row = next(self._row_gen)  # type: ignore
+        except StopIteration:
+            return None
+        # track rowcount if desired
+        self.rowcount = (self.rowcount or 0) + 1
+        return row
+
+    def fetchmany(self, size: int = 1) -> List[Tuple[Any, ...]]:
+        rows = []
+        for _ in range(size):
+            r = self.fetchone()
+            if r is None:
+                break
+            rows.append(r)
+        return rows
+
+    def fetchall(self) -> List[Tuple[Any, ...]]:
+        rows = list(self._row_gen or ())
+        self.rowcount = (self.rowcount or 0) + len(rows)
+        return rows
+
+    def close(self):
+        self._row_gen = None

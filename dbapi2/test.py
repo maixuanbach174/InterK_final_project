@@ -1,32 +1,15 @@
-import time
 from dbapi2.connection import connect
 
-def test_connection():
-    conn = connect(
-        dsn="http://localhost:80/db1", user="johndoe", password="secret"
-    )
+# 1) Connect (will call your /connect endpoint)
+conn = connect("http://127.0.0.1:80", username="johndoe", password="secret", db="db1")
 
-    try:
-        print("1. Kết nối thành công, token đang còn hạn")
-        cursor = conn.cursor()
-        cursor.execute("SELECT * FROM table1")
-        print("   -> Query thành công lần 1: \n")
+# 2) Create a cursor and execute a query (carries the Bearer token)
+cur = conn.cursor()
+cur.execute("SELECT db1.table3.*, id FROM table3 WHERE (student_id > gpa OR birth_date > '2000-01-01') AND 1 = TRUE")
 
-        result = cursor.fetchall()
-        # print(result)
+# 3) Fetch results
+for row in cur.fetchmany(10):
+    print(row)
 
-        # print("\n2. Đợi 61s cho token gần hết hạn...")
-        # time.sleep(61)
-
-        # print("\n3. Thực hiện query lần 2 (token đã hết/gần hết hạn)")
-        # cursor.execute("SELECT * FROM table1")
-        # print("   -> Query thành công lần 2 (token đã được refresh tự động)")
-
-        return True
-    except Exception as e:
-        print(f"Lỗi: {str(e)}")
-        return False
-
-
-if __name__ == "__main__":
-    test_connection()
+cur.close()
+conn.close()

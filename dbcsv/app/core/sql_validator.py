@@ -229,7 +229,10 @@ class SQLValidator:
                 elif isinstance(expr.right, exp.Boolean):
                     return lambda row, cols: op_fn(expr.left.this, expr.right.this)
                 elif isinstance(expr.right, exp.Literal):
-                    return lambda row, cols: False
+                    if expr.right.is_number:
+                        return lambda row, cols: op_fn(expr.left.this, float(expr.right.name))
+                    else:
+                        raise TypeError(f"Type mismatch: {expr.left.sql()} vs {expr.right.sql()}")  
             
             if isinstance(expr.right, exp.Boolean):
                 if isinstance(expr.left, exp.Column):
@@ -239,7 +242,10 @@ class SQLValidator:
                 elif isinstance(expr.left, exp.Boolean):
                     return lambda row, cols: op_fn(expr.left.this, expr.right.this)
                 elif isinstance(expr.left, exp.Literal):
-                    return lambda row, cols: False       
+                    if expr.left.is_number:
+                        return lambda row, cols: op_fn(float(expr.left.name), expr.right.this)
+                    else:
+                        raise TypeError(f"Type mismatch: {expr.left.sql()} vs {expr.right.sql()}")   
             
 
         raise SyntaxError(f"Unsupported predicate: {expr.sql()}")
