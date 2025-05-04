@@ -14,7 +14,7 @@ router = APIRouter(
 
 @router.post('/sql')
 def query_by_sql(sql_request: SQLRequest, current_user: Annotated[User, current_user_dependency], database_engine: Annotated[DatabaseEngine, Depends(get_engine)]):
-    result = database_engine.execute(sql_request.sql_statement, sql_request.schema)
+    result = database_engine.execute(sql_request.sql, sql_request.db)
     result2 = []
     for row in result:
         result2.append(row)

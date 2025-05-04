@@ -1,4 +1,4 @@
-from typing import List, Any, Dict, Iterator
+from typing import List, Any, Iterator
 
 class LogicalPlan:
     def execute(self) -> Iterator[List[Any]]:

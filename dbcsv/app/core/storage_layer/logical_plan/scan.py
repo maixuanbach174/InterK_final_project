@@ -6,20 +6,22 @@ from dbcsv.app.core.storage_layer.metadata import Metadata
 
 
 class Scan(LogicalPlan):
-    def __init__(self, schema: str, table: str, metadata: dict[str, str], batch_size: int = 1000):
-        self.schema_name = schema.lower()
-        self.table_name = table.lower()
-        self._metadata = metadata
-        self._columns = list(metadata.keys()) if metadata else []
-        self._column_types = list(metadata.values()) if metadata else [] 
-        self.batch_size = batch_size
+    def __init__(self, db: str, table: str, metadata: dict[str, str], batch_size: int = 1024):
+        self.__db = db.lower()
+        self.__table = table.lower()
+        self.__metadata = metadata
+        self.__batch_size = batch_size
+        self.__columns = list(metadata.keys())
+        self.__column_types = list(metadata.values())
         
     def execute(self) -> 'TableIterator':
-        return TableIterator(self.schema_name, self.table_name, self._metadata, self.batch_size)
+        return TableIterator(self.__db, self.__table, self.__metadata, self.__batch_size)
     
     @property
-    def columns(self) -> List[str]:
-        return self._columns
+    def columns(self):
+        return self.__columns
+
     @property
-    def column_types(self) -> List[str]:
-        return self._column_types
+    def column_types(self):
+        return self.__column_types
+

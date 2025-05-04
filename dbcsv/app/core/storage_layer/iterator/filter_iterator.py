@@ -3,9 +3,14 @@ from typing import List, Any, Iterator, Callable
 
 class FilterIterator:
     def __init__(self, child_iter: Iterator[List[Any]], 
-                 predicate: Callable[[List[Any], List[str]], bool]):
+                 predicate: Callable[[List[Any], List[str]], bool],
+                 columns: List[str],        
+                 column_types: List[str]):
         self.child_iter = child_iter
         self.predicate = predicate
+        self._columns = columns
+        self._column_types = column_types
+        
     def __iter__(self) -> 'FilterIterator':
         return self
         
@@ -20,3 +25,11 @@ class FilterIterator:
                     return row
             except StopIteration:
                 raise
+    
+    @property
+    def columns(self):
+        return self._columns
+
+    @property
+    def column_types(self):
+        return self._column_types
