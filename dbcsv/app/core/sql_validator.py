@@ -66,13 +66,32 @@ class SQLValidator:
         # 4. WHERE clause (unchanged)
         where = tree.args.get("where")
         predicate = None
+        always_true = False
+        always_false = False
+
         if where:
-            predicate = self._validate_predicate(where.this, table, metadata)
+            expr = where.this
+            # first, attempt constant‑fold
+            const = self._eval_constant(expr)
+            if const is True:
+                # no need to filter at all
+                always_true = True
+                predicate = None
+            elif const is False:
+                # filter always rejects → nothing to scan
+                always_false = True
+                # we can assign a lambda that never passes, or handle specially later
+                predicate = lambda row, cols: False
+            else:
+                # non‑constant: build the usual predicate fn
+                predicate = self._validate_predicate(expr, table, metadata)
         return {
             "db": db,
             "columns": columns,
             "table": table,
             "predicate": predicate,
+            "always_true": always_true,
+            "always_false": always_false,
         }
 
     def _validate_projection(self, tree: exp.Expression, table: str, db: str, metadata: Metadata) -> list[str]:
@@ -107,6 +126,9 @@ class SQLValidator:
     def _validate_predicate(self, expr: exp.Expression, table: str, metadata: Metadata) -> Callable[[List[Any], List[str]], bool]:
         if isinstance(expr, exp.Boolean):
             return lambda row, cols: expr.this
+        
+        if isinstance(expr, exp.Paren):
+            return self._validate_predicate(expr.this, table, metadata)
         # AND / OR
         if isinstance(expr, exp.And):
             left_fn  = self._validate_predicate(expr.left,  table, metadata)
@@ -166,21 +188,14 @@ class SQLValidator:
                         row[cols.index(expr.left.name)],
                         row[cols.index(expr.right.name)]
                     )
-
             # Literal vs Literal
             if isinstance(expr.left, exp.Literal) and isinstance(expr.right, exp.Literal):
-                left_value = expr.left.name
-                if expr.left.is_int:
-                    left_value = int(left_value)
-                elif expr.left.is_number:
-                    left_value = float(left_value)
-                right_value = expr.right.name
-                if expr.right.is_int:
-                    right_value = int(right_value)
-                elif expr.right.is_number:
-                    right_value = float(right_value) 
-                return lambda row, cols: op_fn(left_value, right_value)
-
+                if expr.left.is_number and expr.right.is_number:
+                    return lambda row, cols: op_fn(float(expr.left.name), float(expr.right.name))
+                elif expr.left.is_string and expr.right.is_string:
+                    return lambda row, cols: op_fn(expr.left.name, expr.right.name)
+                else:
+                    raise TypeError(f"Type mismatch: {expr.left.sql()} vs {expr.right.sql()}")
 
             # Literal vs Column
             if isinstance(expr.left, exp.Literal) and isinstance(expr.right, exp.Column):
@@ -243,4 +258,53 @@ class SQLValidator:
             if column.name not in metadata.data[table]:
                 raise ValueError(f"Column not found: {column.sql()}")
             return metadata.data[table][column.name]
-        raise ValueError(f"Unsupported Column type: {column.sql()}")     
+        raise ValueError(f"Unsupported Column type: {column.sql()}")  
+
+    def _eval_constant(self, expr: exp.Expression) -> bool | None:
+        """
+        Return True/False if expr contains no Column and can be evaluated now;
+        otherwise return None.
+        """
+        # if there is any Column anywhere, it’s non‑constant
+        if isinstance(expr, exp.Paren):
+            return self._eval_constant(expr.this)
+
+        if expr.find(exp.Column):
+            return None
+
+        # Literal boolean (WHERE TRUE, WHERE FALSE)
+        if isinstance(expr, exp.Boolean):
+            return bool(expr.this)
+
+        # comparison of two literals
+        if isinstance(expr, (exp.EQ, exp.NEQ, exp.GT, exp.LT, exp.GTE, exp.LTE)):
+            left, right = expr.left, expr.right
+            if isinstance(left, exp.Literal) and isinstance(right, exp.Literal):
+                # convert to Python values
+                if expr.left.is_number and expr.right.is_number:
+                    l = float(expr.left.name)
+                    r = float(expr.right.name)
+                    return self.OPERATORS[type(expr)](l, r)
+                elif expr.left.is_string and expr.right.is_string:
+                    return self.OPERATORS[type(expr)](expr.left, expr.right)
+                else:
+                    raise TypeError(f"Type mismatch: {expr.left.sql()} vs {expr.right.sql()}")
+            return None
+
+        # AND/OR: both sides must be constant
+        if isinstance(expr, exp.And):
+            l = self._eval_constant(expr.left)
+            r = self._eval_constant(expr.right)
+            if l is not None and r is not None:
+                return l and r
+            return None
+
+        if isinstance(expr, exp.Or):
+            l = self._eval_constant(expr.left)
+            r = self._eval_constant(expr.right)
+            if l is not None and r is not None:
+                return l or r
+            return None
+
+        # unhandled node types → non‑constant
+        return None   

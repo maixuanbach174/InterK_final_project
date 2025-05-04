@@ -7,8 +7,7 @@ import jwt
 import time
 import os
 
-import dbcsv.app.core.config
-from dbcsv.app.core.dbapi2.exception import (
+from dbapi2.exception import (
     InterfaceError,
     OperationalError,
     AuthenticationError,
@@ -45,9 +44,9 @@ def validate_dsn_url(dsn: str) -> str:
         raise InterfaceError("DSN must not contain query, fragment, user/password…")
 
     parts = dsn.rsplit("/", 1)
-    url, schema = parts[0], parts[1]
+    url, db = parts[0], parts[1]
 
-    return schema, url
+    return db, url
 
 
 def login(url: str, username: str, password: str) -> str:
@@ -104,11 +103,11 @@ def validate_token(url: str, token: str) -> Union[str, None]:
         raise exc
 
 
-def query(url: str, token: str, schema: str, query: str) -> dict:
+def query(url: str, token: str, db: str, query: str) -> dict:
     header = {
         "Authorization": f"Bearer {token}"
     }  # this token's exp date is never invalid since it is refreshed in the previous step (validate_token)
-    data = {"sql_statement": query, "schema": schema}
+    data = {"sql": query, "db": db}
     try:
         r = requests.post(f"{url}/query/sql/", json=data, headers=header, timeout=5)
         r.raise_for_status()

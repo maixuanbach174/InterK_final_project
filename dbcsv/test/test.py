@@ -1,4 +1,3 @@
-import datetime
 from dbcsv.app.core.sql_validator import SQLValidator
 from dbcsv.app.core.storage_layer.metadata import Metadata
 from dbcsv.app.core.storage_layer.query_executor import QueryExecutor

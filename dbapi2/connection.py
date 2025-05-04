@@ -1,55 +1,45 @@
 from typing import Optional, List, Any
 
-from dbcsv.app.core.dbapi2.utils import validate_dsn_url, login, query, validate_token
-from dbcsv.app.core.dbapi2.exception import InternalError, NotSupportedError
+from dbapi2.utils import validate_dsn_url, login, query, validate_token
+from dbapi2.exception import InternalError, NotSupportedError
 
 
 class Connection:
     def __init__(self, token: str):
         self.token = token
-        self._url = None
-        self._is_online = True
-        self._schema = None
+        self.__url = None
+        self.__is_online = True
+        self.__db = None
 
     @property
     def url(self):
-        return self._url
+        return self.__url
 
     @url.setter
     def url(self, url):
-        self._url = url
+        self.__url = url
 
     @property
     def is_online(self):
-        return self._is_online
+        return self.__is_online
 
     @property
-    def schema(self):
-        return self._schema
+    def db(self):
+        return self.__db
 
-    @schema.setter
-    def schema(self, schema):
-        self._schema = schema
+    @db.setter
+    def db(self, db):
+        self.__db = db
 
     def cursor(self) -> "Cursor":
-        if not self._is_online:
+        if not self.__is_online:
             raise InternalError("Cannot create any cursor from a closed connection")
         return Cursor(self)
 
-    def rollback(self):
-        if not self._is_online:
-            raise InternalError("Connection is closed.")
-        raise NotSupportedError("rollback() is currently not supported")
-
-    def commit(self):
-        if not self._is_online:
-            raise InternalError("Connection is closed.")
-        pass
-
     def close(self):
-        if not self._is_online:
+        if not self.__is_online:
             raise InternalError("Connection is already closed")
-        self._is_online = False
+        self.__is_online = False
 
 
 class Cursor:

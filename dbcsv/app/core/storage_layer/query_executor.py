@@ -8,6 +8,8 @@ class QueryExecutor:
     def __init__(self, metadatas: dict[str, Metadata]):
         self.__metadatas = metadatas
     def execute_parsed_sql(self, sql_dict: dict[str, Any]) -> Iterator[List[Any]]:
+        if sql_dict.get("always_false"):
+            return iter([])
         metadata = self.__metadatas[sql_dict['db']]
         try:  
             logical_plan = sql_to_logical_plan(sql_dict, metadata)
