@@ -16,7 +16,7 @@ async def connection(
     db: Annotated[str, Form()],
     database_engine: DatabaseEngine = Depends(get_engine)
 ) -> Token:
-    if db not in database_engine.__dbs:
+    if db not in database_engine.dbs:
         raise HTTPException(400, f"Schema not found: {db}")
     return auth_manager.login_for_access_token(username, password)
 
