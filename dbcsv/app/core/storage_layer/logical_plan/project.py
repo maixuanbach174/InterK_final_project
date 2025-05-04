@@ -8,7 +8,7 @@ class Project(LogicalPlan):
         self.child = child
         child_collums = child.columns
         
-        self._columns = columns if columns != ['*'] else child_collums
+        self._columns = columns if '*' not in columns else child_collums
         # Calculate column indices for projection
         self._column_indices = [child_collums.index(col) if col in child_collums else -1 for col in self.columns]
         self._column_types = [child.column_types[i] for i in self._column_indices if i != -1]

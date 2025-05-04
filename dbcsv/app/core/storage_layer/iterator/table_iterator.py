@@ -6,102 +6,101 @@ import os
 import json
 from typing import List, Any
 
-from dbcsv.app.core.storage_layer.datatypes import DBTypeObject
+from dbcsv.app.core.storage_layer.datatypes import prepare_converters
 
 DB_DIR = str(Path(__file__).parent.parent.parent.parent.parent / "data")
 
 class TableIterator:
-    # path: schema/table_name
-    def __init__(self, schema: str, table: str, metadata: dict[str, str] = None, batch_size: int = 1000):
-        self.schema = schema.lower()
-        self.table_name = table.lower()
-        self.batch_size = batch_size
-        self._columns = list(metadata.keys()) if metadata else []
-        self._column_types = list(metadata.values()) if metadata else []
-        self._file = self._load_file(schema=self.schema, table=self.table_name)
-        self._reader = csv.reader(self._file)
-        self._check_header()
-        self._is_done = False
-        self._cache: List[List[Any]] = []
-        self._used: List[List[Any]] = []
+    def __init__(self, db: str, table: str, metadata: dict[str, str], batch_size: int = 1000):
+        self.__db = db.lower()
+        self.__table = table.lower()
+        self.__batch_size = batch_size
+        self.__columns = list(metadata.keys())
+        self.__column_types = list(metadata.values())
+        self.__converters = prepare_converters(self.__column_types)
+        self.__file = self.__load_file(db=self.__db, table=self.__table)
+        self.__reader = csv.reader(self.__file)
+        self.__check_header()
+        self.__is_done = False
+        self.__cache: List[List[Any]] = []
+        self.__used: List[List[Any]] = []
     
     def __iter__(self) -> 'TableIterator':
         return self
     
     def _load_next_batch(self) -> List[List[Any]]:
-        self._cache = []
-        for _ in range(self.batch_size):
+        self.__cache = []
+        for _ in range(self.__batch_size):
             try:
-                row = next(self._reader)
-                row = DBTypeObject.convert_type(row, self._column_types)
-                
-                if len(row) != len(self._columns):
-                    raise ValueError(f"Row length does not match column length in {self.schema}/{self.table_name}.")
-                self._cache.append(row)
+                row = next(self.__reader)
+                row = [fn(cell) for fn, cell in zip(self.__converters, row)]
+                if len(row) != len(self.__columns):
+                    raise ValueError(f"Row length does not match column length in {self.__db}/{self.__table}.")
+                self.__cache.append(row)
             except StopIteration:
-                self._is_done = True
+                self.__is_done = True
                 break
     
     def __next__(self) -> List[List[Any]]:
-        if not self._cache and not self._is_done:
+        if not self.__cache and not self.__is_done:
             self._load_next_batch()
 
-        if self._cache:
-            self._used.append(self._cache[0])
-            return self._cache.pop(0)
+        if self.__cache:
+            self.__used.append(self.__cache[0])
+            return self.__cache.pop(0)
         else:
             self.close()
             raise StopIteration       
 
 
-    def _load_file(self, schema: str, table: str):
-        schema, table = schema.lower(), table.lower()
-        data_path = os.path.join(DB_DIR, schema, table + ".csv")
+    def __load_file(self, db: str, table: str):
+        db, table = db.lower(), table.lower()
+        data_path = os.path.join(DB_DIR, db, table + ".csv")
         print(f"Loading data from {data_path}")
         try:
             return open(data_path, "r", encoding="utf-8")
         except FileNotFoundError:
-            print(self.table_name)
-            raise FileNotFoundError(f"Table {self.table_name} not found.")
+            print(self.__table)
+            raise FileNotFoundError(f"Table {self.__table} not found.")
         except Exception as e:
-            raise Exception(f"Error loading table {self.table_name}: {e}")
+            raise Exception(f"Error loading table {self.__table}: {e}")
         
-    def _check_header(self) -> None:
-        header = next(self._reader)
-        if len(header) != len(self._columns):
-            raise ValueError(f"Header length does not match column length in {self.schema}/{self.table_name}.")
-        if any(col.lower() != header[i].lower() for i, col in enumerate(self._columns)):
-            raise ValueError(f"Header names do not match column names in {self.schema}/{self.table_name}.")
+    def __check_header(self) -> None:
+        header = next(self.__reader)
+        if len(header) != len(self.__columns):
+            raise ValueError(f"Header length does not match column length in {self.__db}/{self.__table}.")
+        if any(col.lower() != header[i].lower() for i, col in enumerate(self.__columns)):
+            raise ValueError(f"Header names do not match column names in {self.__db}/{self.__table}.")
 
     def __del__(self):
         self.close()
 
     def __repr__(self):
-        result = f"Table: {self.table_name}\n"
-        columns = [f"\n\t{col} ({typ})" for col, typ in zip(self._columns, self._column_types)]
+        result = f"Table: {self.__table}\n"
+        columns = [f"\n\t{col} ({typ})" for col, typ in zip(self.__columns, self.__column_types)]
         result += f"Columns: {''.join(columns)}\n"
         
-        col_widths = [max(len(str(cell)) for cell in [col] + [row[i] for row in self._data]) for i, col in enumerate(self._columns)]
+        col_widths = [max(len(str(cell)) for cell in [col] + [row[i] for row in self._data]) for i, col in enumerate(self.__columns)]
 
-        header = [h.ljust(width) for h, width in zip(self._columns, col_widths)]
+        header = [h.ljust(width) for h, width in zip(self.__columns, col_widths)]
         result += " | ".join(header) + "\n"
         result += "-" * (sum(col_widths) + 3 * (len(header) - 1)) + "\n"
 
-        for row in self._cache:
+        for row in self.__cache:
             row_str = [str(cell).ljust(width) for cell, width in zip(row, col_widths)]
             result += " | ".join(row_str) + "\n"
 
         return result
     
     def close(self) -> None:
-        if hasattr(self, "_file") and self._file:
-            self._file.close()
+        if hasattr(self, "_file") and self.__file:
+            self.__file.close()
     
     def to_json(self, limit: int = None):
         if not limit:
-            limit = self.batch_size
+            limit = self.__batch_size
 
-        tmp_file = self._load_file(schema=self.schema, table=self.table_name)
+        tmp_file = self.__load_file(__db=self.__db, table=self.__table)
         tmp_reader = csv.reader(tmp_file)
         next(tmp_reader)  # Skip the header
 
@@ -109,28 +108,28 @@ class TableIterator:
         for i, row in enumerate(tmp_reader):
             if i >= limit:
                 break
-            if len(row) != len(self._columns):
-                raise ValueError(f"Row length does not match column length in {self.schema}/{self.table_name}.")
+            if len(row) != len(self.__columns):
+                raise ValueError(f"Row length does not match column length in {self.__db}/{self.__table}.")
             data.append(row)
 
         tmp_file.close()
 
         result = {
-            "table_name": self.table_name,
-            "columns": self._columns,
-            "column_types": self._column_types,
+            "__table": self.__table,
+            "columns": self.__columns,
+            "column_types": self.__column_types,
             "data": data
         }
         return json.dumps(result, indent=4)
 
     @property
     def cache(self):
-        return self._cache
+        return self.__cache
 
     @property
     def columns(self):
-        return self._columns
+        return self.__columns
 
     @property
     def column_types(self):
-        return self._column_types
+        return self.__column_types

@@ -34,9 +34,9 @@ class Metadata:
                     if table_name:
                         self.data[table_name] = table_meta
         except FileNotFoundError:
-            raise FileNotFoundError(f"{self.name} schema not found.")
+            raise FileNotFoundError(f"Database '{self.name}' not found.")
         except yaml.YAMLError as e:
-            raise ValueError(f"Error parsing {self.name} schema: {e}")
+            raise ValueError(f"Error parsing {self.name} database: {e}")
                 
 
     def get_table(self, table_name: str) -> dict[str, str]:

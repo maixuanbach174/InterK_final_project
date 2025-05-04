@@ -4,7 +4,7 @@ from typing import List, Any, Iterator, Callable
 class FilterIterator:
     def __init__(self, child_iter: Iterator[List[Any]], 
                  predicate: Callable[[List[Any], List[str]], bool],
-                 columns: List[str],
+                 columns: List[str],        
                  column_types: List[str]):
         self.child_iter = child_iter
         self.predicate = predicate
