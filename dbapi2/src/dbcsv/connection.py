@@ -58,6 +58,7 @@ class Cursor:
         self._row_gen: Optional[Iterator[Tuple[Any,...]]] = None
         self.description = None
         self.rowcount: int = -1
+        self.itersize: int = 5000
 
     def execute(self, operation: str, parameters: Any = None):
         """
@@ -127,7 +128,7 @@ class Cursor:
         self.rowcount = (self.rowcount or 0) + 1
         return row
 
-    def fetchmany(self, size: int = 1) -> List[Tuple[Any, ...]]:
+    def fetchmany(self, size: int = 100) -> List[Tuple[Any, ...]]:
         rows = []
         for _ in range(size):
             r = self.fetchone()
@@ -137,9 +138,18 @@ class Cursor:
         return rows
 
     def fetchall(self) -> List[Tuple[Any, ...]]:
-        rows = list(self._row_gen or ())
-        self.rowcount = (self.rowcount or 0) + len(rows)
-        return rows
+        self.rowcount = (self.rowcount or 0) + self.itersize
+        return self.fetchmany(self.itersize)
+    
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        # pull one row at a time, but under‑the‑hood we batch
+        row = self.fetchone()
+        if row is None:
+            raise StopIteration
+        return row
 
     def close(self):
         self._row_gen = None

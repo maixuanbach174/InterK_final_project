@@ -1,9 +1,11 @@
 student_id,full_name,gpa,is_enrolled,birth_date
-1,John Doe,3.50,TRUE,2000-01-15
-2,Jane Smith,3.85,FALSE,1999-06-30
-3,Ahmed Khan,2.75,TRUE,2001-11-02
-4,Wei Zhang,3.20,TRUE,2000-04-18
-5,María García,3.95,FALSE,1998-12-05
-6,Olivia Brown,3.10,TRUE,2002-07-22
-7,Lucas Müller,2.50,FALSE,2001-03-10
-8,Sophia Rossi,3.70,TRUE,1999-09-27
+1,Alice Smith,3.50,TRUE,2000-01-15
+2,Bob Jones,2.75,FALSE,1999-12-31
+3,Carol Nguyen,4.00,TRUE,2001-06-10
+4,David Li,0.00,TRUE,2002-11-05
+5,Eve García,3.99,FALSE,1998-07-23
+6,Frank Müller,2.00,TRUE,2000-02-29
+7,Grace O’Connor,3.25,FALSE,1999-05-17
+8,Hiro Tanaka,3.75,TRUE,2001-09-30
+9,Ivan Petrov,1.50,FALSE,1995-03-12
+10,Judy Chen,3.10,TRUE,2003-12-01

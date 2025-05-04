@@ -56,7 +56,7 @@ class TableIterator:
     def __load_file(self, db: str, table: str):
         db, table = db.lower(), table.lower()
         data_path = os.path.join(DB_DIR, db, table + ".csv")
-        print(f"Loading data from {data_path}")
+        # print(f"Loading data from {data_path}")
         try:
             return open(data_path, "r", encoding="utf-8")
         except FileNotFoundError:
