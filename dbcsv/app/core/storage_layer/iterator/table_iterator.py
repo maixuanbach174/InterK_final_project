@@ -29,17 +29,31 @@ class TableIterator:
         return self
     
     def _load_next_batch(self) -> List[List[Any]]:
+        """
+        Load up to batch_size rows into self.__cache.
+        Any row that raises ValueError during conversion or has wrong length is skipped.
+        """
         self.__cache = []
-        for _ in range(self.__batch_size):
+        while len(self.__cache) < self.__batch_size:
             try:
-                row = next(self.__reader)
-                row = [fn(cell) for fn, cell in zip(self.__converters, row)]
-                if len(row) != len(self.__columns):
-                    raise ValueError(f"Row length does not match column length in {self.__db}/{self.__table}.")
-                self.__cache.append(row)
+                raw_row = next(self.__reader)
             except StopIteration:
                 self.__is_done = True
                 break
+
+            # Attempt to convert the row
+            try:
+                converted = [fn(cell) for fn, cell in zip(self.__converters, raw_row)]
+                # If the row is too short or too long, skip it
+                if len(converted) != len(self.__columns):
+                    continue
+            except ValueError:
+                # Conversion failed (invalid int/float/bool/date/etc.) → skip row
+                # Optionally log warning here
+                continue
+
+            # If we reach here, row is valid
+            self.__cache.append(converted)
     
     def __next__(self) -> List[List[Any]]:
         if not self.__cache and not self.__is_done:
