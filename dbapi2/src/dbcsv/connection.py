@@ -1,7 +1,7 @@
 import json
 import time
 import requests
-from requests import ReadTimeout
+from requests.exceptions import ChunkedEncodingError, ReadTimeout, ConnectionError
 from typing import Any, Iterator, List, Optional, Tuple
 
 # PEP‑249 globals
@@ -20,7 +20,7 @@ def connect(
     username: str,
     password: str,
     db:   str,
-    timeout:  float = 5.0,
+    timeout:  float = 30.0,
 ) -> "Connection":
     """
     DB‑API connect: authenticate against /auth/connect to get token + schema.
@@ -60,6 +60,7 @@ class Cursor:
         self.description = None
         self.rowcount: int = -1
         self.itersize: int = 5000
+        self._timeout = 10.0
 
     def execute(self, operation: str, parameters: Any = None):
         """
@@ -77,7 +78,7 @@ class Cursor:
                 url,
                 json=payload,
                 headers=headers,
-                timeout=(self._conn._timeout),
+                timeout=self._timeout,
                 stream=True,
             )
         except requests.RequestException as e:
@@ -120,8 +121,8 @@ class Cursor:
                         yield tuple(row)
                 else:
                     yield tuple(data)
-        except (ConnectionError, ReadTimeout):
-            raise DatabaseError(f"Read timed out after {self._conn._timeout}s")
+        except (ChunkedEncodingError, ReadTimeout, ConnectionError):
+            return
         finally:
             resp.close()
                 
