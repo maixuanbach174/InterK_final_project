@@ -1,9 +1,0 @@
-student_id,full_name,gpa,is_enrolled,birth_date
-1,John Doe,3.50,TRUE,2000-01-15
-2,Jane Smith,3.85,FALSE,1999-06-30
-3,Ahmed Khan,2.75,TRUE,2001-11-02
-4,Wei Zhang,3.20,TRUE,2000-04-18
-5,María García,3.95,FALSE,1998-12-05
-6,Olivia Brown,3.10,TRUE,2002-07-22
-7,Lucas Müller,2.50,FALSE,2001-03-10
-8,Sophia Rossi,3.70,TRUE,1999-09-27

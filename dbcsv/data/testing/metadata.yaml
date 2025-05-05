@@ -1,0 +1,63 @@
+tables:
+  - table_name: mock_data
+    columns:
+      - column_name: col_0
+        column_type: INT
+      - column_name: col_1
+        column_type: FLOAT
+      - column_name: col_2
+        column_type: VARCHAR
+      - column_name: col_3
+        column_type: INT
+      - column_name: col_4
+        column_type: FLOAT
+      - column_name: col_5
+        column_type: VARCHAR
+      - column_name: col_6
+        column_type: INT
+      - column_name: col_7
+        column_type: FLOAT
+      - column_name: col_8
+        column_type: VARCHAR
+      - column_name: col_9
+        column_type: INT
+      - column_name: col_10
+        column_type: FLOAT
+      - column_name: col_11
+        column_type: VARCHAR
+      - column_name: col_12
+        column_type: INT
+      - column_name: col_13
+        column_type: FLOAT
+      - column_name: col_14
+        column_type: VARCHAR
+      - column_name: col_15
+        column_type: INT
+      - column_name: col_16
+        column_type: FLOAT
+      - column_name: col_17
+        column_type: VARCHAR
+      - column_name: col_18
+        column_type: INT
+      - column_name: col_19
+        column_type: FLOAT
+      - column_name: col_20
+        column_type: VARCHAR
+      - column_name: col_21
+        column_type: INT
+      - column_name: col_22
+        column_type: FLOAT
+      - column_name: col_23
+        column_type: VARCHAR
+      - column_name: col_24
+        column_type: INT
+      - column_name: col_25
+        column_type: FLOAT
+      - column_name: col_26
+        column_type: VARCHAR
+      - column_name: col_27
+        column_type: INT
+      - column_name: col_28
+        column_type: FLOAT
+      - column_name: col_29
+        column_type: VARCHAR

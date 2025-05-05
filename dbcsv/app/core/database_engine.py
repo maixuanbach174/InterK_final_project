@@ -16,14 +16,14 @@ class DataAccessError(Exception):
 
 class DatabaseEngine():
     def __init__(self):
-        self.__dbs : list[str] = self.__loadSchemas()
-        self.__metadatas : dict[str, Metadata]= self.__loadMetadatas()  # Initialize the dict
-        self.__validator = SQLValidator(self.__metadatas)
-        self.__executor = QueryExecutor(self.__metadatas)
+        self.dbs : list[str] = self.__loadSchemas()
+        self.metadatas : dict[str, Metadata]= self.__loadMetadatas()  # Initialize the dict
+        self.__validator = SQLValidator(self.metadatas)
+        self.__executor = QueryExecutor(self.metadatas)
     
     def __loadMetadatas(self) -> dict[str, Metadata]:
-        self.__metadatas = {schema: Metadata(schema) for schema in self.__dbs}
-        return self.__metadatas
+        self.metadatas = {schema: Metadata(schema) for schema in self.dbs}
+        return self.metadatas
     
     def __loadSchemas(self) -> list[str]:
         path = Path(__file__).parent.parent.parent / 'data' 
@@ -32,7 +32,7 @@ class DatabaseEngine():
         return dbs
 
     def execute(self, sql_statement: str, db: str) -> Iterator[List[Any]]:
-        if db not in self.__dbs:
+        if db not in self.dbs:
             raise SQLValidationError(f"Database not found: {db}")
         try:
             tree = self.__validator.parse(sql_statement)

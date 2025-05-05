@@ -1,1 +1,0 @@
-from dbcsv.app.core.dbapi2.connection import connect
