@@ -1,6 +1,7 @@
 import json
 import time
 import requests
+from requests import ReadTimeout
 from typing import Any, Iterator, List, Optional, Tuple
 
 # PEP‑249 globals
@@ -76,7 +77,7 @@ class Cursor:
                 url,
                 json=payload,
                 headers=headers,
-                timeout=self._conn._timeout,
+                timeout=(self._conn._timeout),
                 stream=True,
             )
         except requests.RequestException as e:
@@ -101,23 +102,28 @@ class Cursor:
         """
         NDJSON or JSON‑batch stream.  Any JSON errors become ProgrammingError.
         """
-        for line in resp.iter_lines(decode_unicode=True):
-            if not line:
-                continue
-            try:
-                data = json.loads(line)
-            except json.JSONDecodeError as e:
-                raise ProgrammingError(f"Invalid JSON in response: {e}") from e
+        try:
+            for line in resp.iter_lines(decode_unicode=True):
+                if not line:
+                    continue
+                try:
+                    data = json.loads(line)
+                except json.JSONDecodeError as e:
+                    raise ProgrammingError(f"Invalid JSON in response: {e}") from e
 
-            if not isinstance(data, list):
-                raise ProgrammingError(f"Unexpected payload: {data!r}")
+                if not isinstance(data, list):
+                    raise ProgrammingError(f"Unexpected payload: {data!r}")
 
-            # batch or single-row?
-            if data and isinstance(data[0], list):
-                for row in data:
-                    yield tuple(row)
-            else:
-                yield tuple(data)
+                # batch or single-row?
+                if data and isinstance(data[0], list):
+                    for row in data:
+                        yield tuple(row)
+                else:
+                    yield tuple(data)
+        except (ConnectionError, ReadTimeout):
+            raise DatabaseError(f"Read timed out after {self._conn._timeout}s")
+        finally:
+            resp.close()
                 
     def fetchone(self) -> Optional[Tuple[Any, ...]]:
         try:
@@ -138,7 +144,6 @@ class Cursor:
         return rows
 
     def fetchall(self) -> List[Tuple[Any, ...]]:
-        self.rowcount = (self.rowcount or 0) + self.itersize
         return self.fetchmany(self.itersize)
     
     def __iter__(self):
