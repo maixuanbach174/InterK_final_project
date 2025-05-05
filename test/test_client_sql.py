@@ -5,14 +5,13 @@ import time
 
 
 # your server + credentials
-BASE_URL = "http://127.0.0.1:80"
+BASE_URL = "http://127.0.0.1:80/testing"
 USERNAME = "johndoe"
 PASSWORD = "secret"
-DB = "db2"
 
 # (sql, expected_rowcount, expected_exception)
 tests = [
-    ("SELECT * FROM peoplesmall WHERE city = 'Chicago' AND age > 30 OR age < 20", 1_000_000, None)
+    ("SELECT * FROM mock_data" , 1_000_000, None)
     # simple column vs column
     # ("SELECT * FROM table4 WHERE student_id > gpa", 100, None),
     # ("SELECT * FROM table4 WHERE gpa < student_id", 100, None),
@@ -68,7 +67,7 @@ tests = [
 def main():
     start = time.time()
     try:
-        conn = connect(BASE_URL, USERNAME, PASSWORD, DB)
+        conn = connect(BASE_URL, USERNAME, PASSWORD)
     except Exception as e:
         print(f"CONNECT FAILED: {e}")
         sys.exit(1)

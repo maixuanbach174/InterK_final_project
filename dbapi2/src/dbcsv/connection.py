@@ -1,5 +1,6 @@
 import json
 import time
+from urllib.parse import urlparse
 import requests
 from requests.exceptions import ChunkedEncodingError, ReadTimeout, ConnectionError
 from typing import Any, Iterator, List, Optional, Tuple
@@ -15,27 +16,74 @@ class DatabaseError(Error): ...
 class ProgrammingError(Error): ...
 
 
-def connect(
-    base_url: str,
-    username: str,
-    password: str,
-    db:   str,
-    timeout:  float = 30.0,
-) -> "Connection":
+class InterfaceError(Error):
     """
-    DB‑API connect: authenticate against /auth/connect to get token + schema.
+    Exception raised for errors that are related to the database interface
+    rather than the database itself. (e.g., misuse of the DB-API, driver bugs)
     """
-    base = base_url.rstrip("/")
-    resp = requests.post(
-        f"{base}/auth/connect",
-        data={"username": username, "password": password, "db": db},
-        timeout=timeout,
-    )
-    if resp.status_code != 200:
-        raise DatabaseError(f"Connect failed: {resp.status_code} {resp.text}")
-    tok = resp.json()
-    return Connection(base, tok["access_token"], db, timeout)
 
+    pass
+
+
+# Subclasses of DatabaseError
+
+
+class DataError(DatabaseError):
+    """
+    Exception raised for errors that are due to problems with the
+    processed data like division by zero, numeric value out of range, etc.
+    """
+
+    pass
+
+
+class OperationalError(DatabaseError):
+    """
+    Exception raised for errors that are related to the database's operation
+    and not necessarily under the programmer's control, e.g. an unexpected
+    disconnect occurs, the data source name is not found, a transaction
+    could not be processed, a memory allocation error occurred during
+    processing, etc.
+    """
+
+    pass
+
+
+class IntegrityError(DatabaseError):
+    """
+    Exception raised when the relational integrity of the database is affected,
+    e.g. a foreign key check fails, duplicate key, etc.
+    """
+
+    pass
+
+
+class InternalError(DatabaseError):
+    """
+    Exception raised when the database encounters an internal error,
+    e.g. the cursor is not valid anymore, the transaction is out of sync, etc.
+    This may indicate a bug in the database itself or the driver.
+    """
+
+    pass
+
+class NotSupportedError(DatabaseError):
+    """
+    Exception raised in case a method or database API was used which is
+    not supported by the database or driver, e.g. requesting a .rollback() on a
+    connection that does not support transaction or has transactions turned off.
+    """
+
+    pass
+
+
+class AuthenticationError(DatabaseError):
+    """
+    Exception raised when token validation error occurs, like the user is not authenticated,
+    or the refresh endpoint is not online.
+    """
+
+    pass
 
 class Connection:
     def __init__(self, base: str, access_token: str, db: str,timeout: float):
@@ -159,3 +207,77 @@ class Cursor:
 
     def close(self):
         self._row_gen = None
+
+
+def validate_dsn_url(dsn: str) -> str:
+    """
+    Validate if dsn comply to format https://localhost:PORT/<schema_snake_case>.
+    Returns schema_snake_case
+    Throw InterfaceError if fails
+    """
+    parsed = urlparse(dsn)
+
+    # if parsed.scheme not in ["http", "https"]:
+    #     raise InterfaceError("DSN must be http or https")
+
+    if parsed.port is not None and not (1 <= parsed.port <= 65535):
+        raise InterfaceError("port number is not valid (not in range 1‑65535)")
+
+    if (
+        parsed.params
+        or parsed.query
+        or parsed.fragment
+        or parsed.username
+        or parsed.password
+    ):
+        raise InterfaceError("DSN must not contain query, fragment, user/password…")
+
+    parts = dsn.rsplit("/", 1)
+    url, schema = parts[0], parts[1]
+
+    return schema, url
+
+def login(url: str, username: str, password: str, db: str) -> str:
+    data = {
+        "username": username,
+        "password": password,
+        "db": db
+    }
+
+    try:
+        r = requests.post(f"{url}/auth/connect", data=data, timeout=5)
+        r.raise_for_status()  # 4xx/5xx → HTTPError
+        return r.json()["access_token"]
+    except requests.HTTPError as exc:
+        err_json = exc.response.json()  # FastAPI return JSON: {"detail": "..."}
+        detail = err_json.get("detail", exc.response.text)
+        raise OperationalError(detail)
+    except requests.RequestException as exc:
+        # Internet error/timeout/etc.
+        raise exc
+
+def connect(
+    dsn: str,
+    user: Optional[str],
+    password: Optional[str],
+) -> Connection:
+    """
+    Initializes a connection to the database.
+
+    Returns a Connection Object. It takes a number of parameters which are database dependent.
+
+    E.g. a connect could look like this: connect(dsn='https://localhost:1234/schema', user='guido', password='1234')
+    """
+
+    # Validate url correctness
+    db, url = validate_dsn_url(dsn)
+
+    # Request to /login endpoint of dsn to get JWT token. Catches exception if user doesn't exist in database
+    token = login(url, user, password, db)
+
+    # Create connection
+    conn = Connection(url, token, db, 30)
+
+    return conn
+
+

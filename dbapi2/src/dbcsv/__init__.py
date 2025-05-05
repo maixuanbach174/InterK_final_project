@@ -10,16 +10,19 @@ threadsafety = 1         # connections may be shared, cursors not
 paramstyle  = "named"    # we use JSON {"sql": "...", "db": "..."}  
 
 # Convenience imports
-from .connection import connect, Connection, Cursor
+from .connection import (connect, InterfaceError, DatabaseError, OperationalError, 
+    ProgrammingError, NotSupportedError,
+    AuthenticationError)
 
 # What users get when they do `import mydbapi`:
 __all__ = [
     "connect",
-    "Connection",
-    "Cursor",
-    "Error",
+    "OperationalError",
+    "NotSupportedError",
     "DatabaseError",
+    "AuthenticationError",
     "ProgrammingError",
+    "InterfaceError",
     "apilevel",
     "threadsafety",
     "paramstyle",
