@@ -10,3 +10,7 @@ services:
       - .:/app # Updated volume mount
     ports:
       - 80:80
+
+  dbcsv-client: 
+    image: dbcsv-client
+    build: ./dbapi2
