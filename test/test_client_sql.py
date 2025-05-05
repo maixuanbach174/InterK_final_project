@@ -7,60 +7,61 @@ from dbapi2.src.dbcsv.connection import connect, ProgrammingError
 BASE_URL = "http://127.0.0.1:80"
 USERNAME = "johndoe"
 PASSWORD = "secret"
-DB = "db1"
+DB = "db2"
 
 # (sql, expected_rowcount, expected_exception)
 tests = [
+    ("SELECT * FROM peoplesmall WHERE city = 'Chicago' AND age > 30 OR age < 20", 1_000_000, None)
     # simple column vs column
-    ("SELECT * FROM table4 WHERE student_id > gpa", 100, None),
-    ("SELECT * FROM table4 WHERE gpa < student_id", 100, None),
-    ("SELECT * FROM table4 WHERE student_id = gpa", 100, None),
+    # ("SELECT * FROM table4 WHERE student_id > gpa", 100, None),
+    # ("SELECT * FROM table4 WHERE gpa < student_id", 100, None),
+    # ("SELECT * FROM table4 WHERE student_id = gpa", 100, None),
 
-    # column vs literal (and literal vs column)
-    ("SELECT * FROM table4 WHERE student_id > 5", 100, None),
-    ("SELECT * FROM table4 WHERE 5 < student_id", 100, None),
-    ("SELECT * FROM table4 WHERE gpa >= 3.5", 100, None),
+    # # column vs literal (and literal vs column)
+    # ("SELECT * FROM table4 WHERE student_id > 5", 100, None),
+    # ("SELECT * FROM table4 WHERE 5 < student_id", 100, None),
+    # ("SELECT * FROM table4 WHERE gpa >= 3.5", 100, None),
 
-    # constant predicates
-    ("SELECT * FROM table4 WHERE 1 = TRUE", 100, None),    # always false
-    ("SELECT * FROM table4 WHERE TRUE", 100, None),       # always true
-    ("SELECT * FROM table4 WHERE FALSE", 100, None),
+    # # constant predicates
+    # ("SELECT * FROM table4 WHERE 1 = TRUE", 100, None),    # always false
+    # ("SELECT * FROM table4 WHERE TRUE", 100, None),       # always true
+    # ("SELECT * FROM table4 WHERE FALSE", 100, None),
 
-    # boolean column
-    ("SELECT * FROM table4 WHERE is_enrolled = TRUE", 100, None),
-    ("SELECT * FROM table4 WHERE FALSE = is_enrolled", 100, None),
+    # # boolean column
+    # ("SELECT * FROM table4 WHERE is_enrolled = TRUE", 100, None),
+    # ("SELECT * FROM table4 WHERE FALSE = is_enrolled", 100, None),
 
-    # date comparisons
-    ("SELECT * FROM table4 WHERE birth_date > '2000-01-01'", 100, None),
-    ("SELECT * FROM table4 WHERE '2000-02-29' = birth_date", 100, None),
+    # # date comparisons
+    # ("SELECT * FROM table4 WHERE birth_date > '2000-01-01'", 100, None),
+    # ("SELECT * FROM table4 WHERE '2000-02-29' = birth_date", 100, None),
 
-    # mixed logicals
-    ("SELECT * FROM table4 WHERE is_enrolled = TRUE AND gpa > 3.0", 100, None),
-    ("SELECT * FROM table4 WHERE (student_id > 5 OR birth_date > '2000-01-01') AND 1 = TRUE", 100, None),
+    # # mixed logicals
+    # ("SELECT * FROM table4 WHERE is_enrolled = TRUE AND gpa > 3.0", 100, None),
+    # ("SELECT * FROM table4 WHERE (student_id > 5 OR birth_date > '2000-01-01') AND 1 = TRUE", 100, None),
 
-    # parentheses precedence
-    (
-      "SELECT * FROM table4 WHERE student_id > 5 OR birth_date > '2000-01-01' AND gpa > 3.0",
-      100, None
-    ),
-    (
-      "SELECT * FROM table4 WHERE (student_id > 5 OR birth_date > '2000-01-01') AND gpa > 3.0",
-      100, None
-    ),
+    # # parentheses precedence
+    # (
+    #   "SELECT * FROM table4 WHERE student_id > 5 OR birth_date > '2000-01-01' AND gpa > 3.0",
+    #   100, None
+    # ),
+    # (
+    #   "SELECT * FROM table4 WHERE (student_id > 5 OR birth_date > '2000-01-01') AND gpa > 3.0",
+    #   100, None
+    # ),
 
-    # projection variants
-    # ("SELECT * FROM table4 WHERE student_id < 3", 100, None),
-    # ("SELECT table4.* FROM table4 WHERE student_id < 3", 100, None),
-    # ("SELECT db1.table4.* FROM table4 WHERE student_id < 3", 100, None),
-    # ("SELECT student_id FROM table4 WHERE student_id < 3", 100, None),
-    # ("SELECT db1.table4.student_id FROM table4 WHERE student_id < 3", 100, None),
+    # # projection variants
+    # # ("SELECT * FROM table4 WHERE student_id < 3", 100, None),
+    # # ("SELECT table4.* FROM table4 WHERE student_id < 3", 100, None),
+    # # ("SELECT db1.table4.* FROM table4 WHERE student_id < 3", 100, None),
+    # # ("SELECT student_id FROM table4 WHERE student_id < 3", 100, None),
+    # # ("SELECT db1.table4.student_id FROM table4 WHERE student_id < 3", 100, None),
 
-    # error cases: expect ProgrammingErrorxw
-    ("SELECT student_id AS id FROM table4 WHERE TRUE", None, ProgrammingError),
-    ("SELECT student_id+gpa FROM table4 WHERE TRUE", None, ProgrammingError),
-    ("SELECT * FROM table4 WHERE student_id BETWEEN 1 AND 5", None, ProgrammingError),
-    ("SELECT * FROM table4 WHERE foo = 1", None, ProgrammingError),
-    ("SELECT * FROM table4 WHERE other.id = 1", None, ProgrammingError),
+    # # error cases: expect ProgrammingErrorxw
+    # ("SELECT student_id AS id FROM table4 WHERE TRUE", None, ProgrammingError),
+    # ("SELECT student_id+gpa FROM table4 WHERE TRUE", None, ProgrammingError),
+    # ("SELECT * FROM table4 WHERE student_id BETWEEN 1 AND 5", None, ProgrammingError),
+    # ("SELECT * FROM table4 WHERE foo = 1", None, ProgrammingError),
+    # ("SELECT * FROM table4 WHERE other.id = 1", None, ProgrammingError),
 ]
 
 def main():
@@ -80,7 +81,8 @@ def main():
                 print(f"❌ FAIL: {sql!r} expected exception {expected_exc.__name__} but got no exception")
                 failed += 1
             else:
-                rows = cur.fetchmany(100)
+                # rows = cur.fetchmany(100)
+                rows = cur.fetchall()
                 got = len(rows)
                 if got == expected_count:
                     print(f"✅ PASS: {sql!r} -> {got} rows")

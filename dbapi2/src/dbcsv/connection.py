@@ -59,7 +59,7 @@ class Cursor:
         self._row_gen: Optional[Iterator[Tuple[Any,...]]] = None
         self.description = None
         self.rowcount: int = -1
-        self.itersize: int = 5000
+        self.itersize: int = 1_000_000
         self._timeout = 10.0
 
     def execute(self, operation: str, parameters: Any = None):
