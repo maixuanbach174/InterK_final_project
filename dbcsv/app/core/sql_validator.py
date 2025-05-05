@@ -1,6 +1,6 @@
 import operator
 from typing import Any, Callable, List
-from sqlglot import parse_one, exp
+from sqlglot import TokenError, parse_one, exp
 from sqlglot.errors import ParseError
 from dbcsv.app.core.storage_layer.metadata import Metadata
 from dbcsv.app.core.storage_layer.datatypes import convert_datatype
@@ -31,7 +31,7 @@ class SQLValidator:
     def parse(self, sql: str) -> exp.Expression:
         try:
             return parse_one(sql, read=self.__dialect)
-        except ParseError as e:
+        except (ParseError, TokenError) as e:
             raise SyntaxError(f"Syntax error: {e}")
 
     def validate(self, tree: exp.Expression, db: str) -> dict[str, Any]:

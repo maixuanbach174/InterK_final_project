@@ -45,7 +45,7 @@ def stream_query_by_sql(
         # server/data problem → 500
         raise HTTPException(status_code=500, detail=str(e))
 
-    def batch_generator(batch_size: int = 1024):
+    def batch_generator(batch_size: int = 256):
         batch = []
         try:
             for row in iterator:

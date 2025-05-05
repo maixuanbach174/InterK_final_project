@@ -1,6 +1,7 @@
 import sys
 import json
 from dbapi2.src.dbcsv.connection import connect, ProgrammingError
+import time
 
 
 # your server + credentials
@@ -65,6 +66,7 @@ tests = [
 ]
 
 def main():
+    start = time.time()
     try:
         conn = connect(BASE_URL, USERNAME, PASSWORD, DB)
     except Exception as e:
@@ -101,6 +103,7 @@ def main():
     cur.close()
     conn.close()
     print(f"\nSummary: {passed} passed, {failed} failed out of {len(tests)} tests")
+    print (f'ellapse: {time.time() - start}')
 
 if __name__ == "__main__":
     main()
